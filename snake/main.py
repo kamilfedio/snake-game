@@ -85,9 +85,9 @@ class Tail:
         self.y: int = y
         self.last_x: int = x
         self.last_y: int = y
-        self.next: None | Tail = None
 
     def move(self, new_coords: tuple[int, int]) -> None:
+        self.last_x, self.last_y = self.x, self.y
         self.x, self.y = new_coords
 
 
@@ -110,49 +110,38 @@ class Head:
             self.colisioned = True
 
     def get_tail_coords(self) -> list[tuple[int, int]]:
-        coords: list[Any] = []
-        root: Tail = self.tail[0]
-        while root.next:
-            coords.append((root.x, root.y))
-            root = root.next
+        coords: list[tuple[int, int]] = []
+        for cord in self.tail:
+            coords.append((cord.x, cord.y))
 
-        coords.append((root.x, root.y))
         return coords
 
-    def add_tail(self) -> None:
-        root: Tail = self.tail[0]
-        while root.next:
-            root = root.next
+    def get_tail_long(self) -> int:
+        return len(self.tail)
 
-        root.next = Tail(root.last_x, root.last_y)
+    def add_tail(self) -> None:
+        last_tail: Tail = self.tail[-1]
+        new_tail: Tail = Tail(last_tail.last_x, last_tail.last_y)
+        self.tail.append(new_tail)
 
     def move(self, direction: Directions | None = None) -> None:
-
-        def _move_tail(curr_cords: tuple[int, int]) -> None:
-            root: Tail | None = self.tail[0]
-            root.move(curr_cords)
-
-            while root.next:
-                root.next.move((root.last_x, root.last_y))
-                root.last_x, root.last_y = root.x, root.y
-                root: Tail = root.next
-
+        prev_x, prev_y = self.x, self.y
         if not direction:
-            direction = self.last_direction
+            direction: Directions = self.last_direction
 
-        _move_tail((self.x, self.y))
+        if direction == Directions.LEFT:
+            self.x -= 1
+        elif direction == Directions.RIGHT:
+            self.x += 1
+        elif direction == Directions.UP:
+            self.y -= 1
+        elif direction == Directions.DOWN:
+            self.y += 1
 
-        match direction:
-            case Directions.LEFT:
-                self.x -= 1
-            case Directions.RIGHT:
-                self.x += 1
-            case Directions.UP:
-                self.y -= 1
-            case Directions.DOWN:
-                self.y += 1
-            case _:
-                raise MoveException("Move didn't recognize")
+        for i in range(len(self.tail) - 1, 0, -1):
+            self.tail[i].move((self.tail[i - 1].x, self.tail[i - 1].y))
+
+        self.tail[0].move((prev_x, prev_y))
 
         self.last_direction = direction
         self.check_collision()
@@ -162,41 +151,64 @@ class Game:
     def __init__(self) -> None:
         self.board: Board = Board()
         self.player: Head = Head()
-        self.food: Food = Food(
-            blocked_coords=(
-                [(self.player.x, self.player.y)] + self.player.get_tail_coords()
-            ),
+        self.food = Food(
+            blocked_coords=[(self.player.x, self.player.y)]
+            + self.player.get_tail_coords(),
             size=self.board.size,
         )
+
         self.started: bool = False
-        self.stop_time: float = 0.3
+        self.stop_time: float = 0.8
 
     def show_game(self) -> None:
         while True:
             if self.player.colisioned:
                 print(f"Player points: {self.player.points}")
                 print("Game ended")
-                quit()
+                os._exit(0)
 
             if self.started:
                 print(f"Player points: {self.player.points}")
                 time.sleep(self.stop_time)
                 if self.player.active:
                     self.player.move()
-                self.board.display(
-                    (self.player.x, self.player.y),
-                    self.food.coords,
-                    self.player.get_tail_coords(),
-                )
+
                 self.player.active = True
 
                 if (self.player.x, self.player.y) == self.food.coords:
                     self.player.points += 1
                     self.food = Food(
-                        blocked_coords=([self.player.x, self.player.y]),
+                        blocked_coords=[(self.player.x, self.player.y)]
+                        + self.player.get_tail_coords(),
                         size=self.board.size,
                     )
+
+                    score = self.player.points
+                    if score <= 4:
+                        pass
+                    elif score > 4:
+                        self.stop_time = 0.6
+                    elif score > 10:
+                        self.stop_time = 0.5
+                    elif score > 15:
+                        self.stop_time = 0.4
+                    elif score > 20:
+                        self.stop_time = 0.3
+                    else:
+                        self.stop_time = 0.2
+
+                    if self.player.get_tail_long() == 99:
+                        print(f"Player points: {self.player.points}")
+                        print("Game ended - You won")
+                        os._exit(0)
+
                     self.player.add_tail()
+
+                self.board.display(
+                    (self.player.x, self.player.y),
+                    self.food.coords,
+                    self.player.get_tail_coords(),
+                )
 
     def run(self) -> None:
         self.board.create()
