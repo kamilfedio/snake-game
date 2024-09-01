@@ -44,7 +44,10 @@ class Board:
         self.board = board.copy()
 
     def display(
-        self, player_cords: tuple[int, int], food_coords: tuple[int, int], tail_coords: list[tuple[int, int]]
+        self,
+        player_cords: tuple[int, int],
+        food_coords: tuple[int, int],
+        tail_coords: list[tuple[int, int]],
     ) -> None:
         if not self.board:
             raise BoardException
@@ -56,7 +59,7 @@ class Board:
         board[f_y + 1][f_x + 1] = " o "
         board[y + 1][x + 1] = " x "
         for tail in tail_coords:
-            board[tail[1] + 1][tail[0] + 1] = ' # '
+            board[tail[1] + 1][tail[0] + 1] = " # "
 
         os.system(self.clear_msg)
         for line in board:
@@ -75,6 +78,7 @@ class Food:
             coords = randint(0, self.size - 1), randint(0, self.size - 1)
         return coords
 
+
 class Tail:
     def __init__(self, x: int, y: int) -> None:
         self.x: int = x
@@ -82,15 +86,16 @@ class Tail:
         self.last_x: int = x
         self.last_y: int = y
         self.next: None | Tail = None
-    
+
     def move(self, new_coords: tuple[int, int]) -> None:
         self.x, self.y = new_coords
+
 
 class Head:
     def __init__(self, x: int = 5, y: int = 5, size: int = 10) -> None:
         self.x: int = x
         self.y: int = y
-        self.tail: list[Tail] = [Tail(x = 4, y = 5)]
+        self.tail: list[Tail] = [Tail(x=4, y=5)]
         self.last_direction: Directions | None = None
         self.colisioned: bool = False
         self.active: bool = True
@@ -113,7 +118,7 @@ class Head:
 
         coords.append((root.x, root.y))
         return coords
-    
+
     def add_tail(self) -> None:
         root: Tail = self.tail[0]
         while root.next:
@@ -126,7 +131,7 @@ class Head:
         def _move_tail(curr_cords: tuple[int, int]) -> None:
             root: Tail | None = self.tail[0]
             root.move(curr_cords)
-            
+
             while root.next:
                 root.next.move((root.last_x, root.last_y))
                 root.last_x, root.last_y = root.x, root.y
@@ -148,7 +153,7 @@ class Head:
                 self.y += 1
             case _:
                 raise MoveException("Move didn't recognize")
-        
+
         self.last_direction = direction
         self.check_collision()
 
@@ -158,7 +163,10 @@ class Game:
         self.board: Board = Board()
         self.player: Head = Head()
         self.food: Food = Food(
-            blocked_coords=([(self.player.x, self.player.y)] + self.player.get_tail_coords()), size=self.board.size
+            blocked_coords=(
+                [(self.player.x, self.player.y)] + self.player.get_tail_coords()
+            ),
+            size=self.board.size,
         )
         self.started: bool = False
         self.stop_time: float = 0.3
@@ -175,7 +183,11 @@ class Game:
                 time.sleep(self.stop_time)
                 if self.player.active:
                     self.player.move()
-                self.board.display((self.player.x, self.player.y), self.food.coords, self.player.get_tail_coords())
+                self.board.display(
+                    (self.player.x, self.player.y),
+                    self.food.coords,
+                    self.player.get_tail_coords(),
+                )
                 self.player.active = True
 
                 if (self.player.x, self.player.y) == self.food.coords:
@@ -193,7 +205,11 @@ class Game:
         listener_thread.start()
         game_thread.start()
 
-        self.board.display((self.player.x, self.player.y), self.food.coords, self.player.get_tail_coords())
+        self.board.display(
+            (self.player.x, self.player.y),
+            self.food.coords,
+            self.player.get_tail_coords(),
+        )
 
     def start_listener(self) -> None:
         with Listener(on_press=self.on_key_press) as listener:
@@ -203,13 +219,15 @@ class Game:
         def _check_behind(last_dir: Directions | None, cur_dir: Directions) -> bool:
             if not last_dir:
                 return True
-            
-            if (last_dir == Directions.LEFT and cur_dir == Directions.RIGHT) or \
-            (last_dir == Directions.RIGHT and cur_dir == Directions.LEFT) or \
-            (last_dir == Directions.UP and cur_dir == Directions.DOWN) or \
-            (last_dir == Directions.DOWN and cur_dir == Directions.UP):
+
+            if (
+                (last_dir == Directions.LEFT and cur_dir == Directions.RIGHT)
+                or (last_dir == Directions.RIGHT and cur_dir == Directions.LEFT)
+                or (last_dir == Directions.UP and cur_dir == Directions.DOWN)
+                or (last_dir == Directions.DOWN and cur_dir == Directions.UP)
+            ):
                 return False
-            
+
             return True
 
         if not self.player.active:
