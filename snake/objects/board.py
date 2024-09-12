@@ -1,15 +1,18 @@
 from copy import deepcopy
 import os
-from utils.custom_errors import BoardException
+from utils.display_methods import DisplayStrategy, CmdDisplayStrategy
+from utils.custom_errors import DisplayException
+from utils.constants import DisplayType
 
 
 class Board:
     def __init__(self, size: int = 10) -> None:
         self.size: int = size
         self.board: None | list[list[int | str]] = None
-        self.clear_msg = "cls" if os.name == "nt" else "clear"
+        self.clear_msg: str = "cls" if os.name == "nt" else "clear"
+        self.display_strategy: DisplayStrategy | None = None
 
-    def create(self) -> None:
+    def create(self, display_type: DisplayType = DisplayType.CMD) -> None:
         if self.board:
             print("Board already exists")
         board: list[list[str]] = [
@@ -19,25 +22,18 @@ class Board:
         board.append([" - "] * (self.size + 1))
 
         self.board = board.copy()
+        match display_type:
+            case DisplayType.CMD:
+                self.display_strategy = CmdDisplayStrategy()
 
     def display(
         self,
         player_cords: tuple[int, int],
-        food_coords: tuple[int, int],
-        tail_coords: list[tuple[int, int]],
+        food_cords: tuple[int, int],
+        tail_cords: list[tuple[int, int]],
     ) -> None:
-        if not self.board:
-            raise BoardException
-
-        x, y = player_cords
-        f_x, f_y = food_coords
-
-        board = deepcopy(self.board)
-        board[f_y + 1][f_x + 1] = " o "
-        board[y + 1][x + 1] = " x "
-        for tail in tail_coords:
-            board[tail[1] + 1][tail[0] + 1] = " # "
-
-        os.system(self.clear_msg)
-        for line in board:
-            print("".join(line))
+        if not self.display_strategy:
+            raise DisplayException("Display type was not initialized")
+        self.display_strategy.display(
+            deepcopy(self.board), player_cords, food_cords, tail_cords, self.clear_msg
+        )

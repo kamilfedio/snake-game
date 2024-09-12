@@ -4,6 +4,6 @@ class BoardException(Exception):
         super().__init__(self.error)
 
 
-class MoveException(Exception):
+class DisplayException(Exception):
     def __init__(self, error: str) -> None:
         super().__init__(error)
